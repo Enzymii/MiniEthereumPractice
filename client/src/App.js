@@ -1,75 +1,70 @@
-import React, { Component } from "react";
-import SimpleStorageContract from "./contracts/SimpleStorage.json";
-import getWeb3 from "./getWeb3";
+import React, { Component } from 'react';
+import PlatformContract from '../contracts/Platform.json';
 
-import "./App.css";
+import './App.css';
+import getEthEnv from './utils';
+
+import { BrowserRouter, Switch, Route } from 'react-router-dom';
+import TestComponent from './components/test';
+
+export const ethContext = React.createContext({
+  web3: null,
+  accounts: null,
+  networkId: null,
+  userAccount: null,
+});
 
 class App extends Component {
-  state = { storageValue: 0, web3: null, accounts: null, contract: null };
+  state = {
+    storageValue: 0,
+    web3: null,
+    accounts: null,
+    networkId: null,
+    contract: null,
+    userAccount: null,
+  };
 
   componentDidMount = async () => {
     try {
-      // Get network provider and web3 instance.
-      const web3 = await getWeb3();
+      const ethEnv = await getEthEnv();
 
-      // Use web3 to get the user's accounts.
-      const accounts = await web3.eth.getAccounts();
-
-      // Get the contract instance.
-      const networkId = await web3.eth.net.getId();
-      console.log(networkId);
-      const deployedNetwork = SimpleStorageContract.networks[networkId];
-
-      console.log(deployedNetwork);
-
-      const instance = new web3.eth.Contract(
-        SimpleStorageContract.abi,
-        deployedNetwork && deployedNetwork.address,
+      const deployedNetwork = PlatformContract.networks[ethEnv.networkId];
+      const contract = new ethEnv.web3.eth.Contract(
+        PlatformContract.abi,
+        deployedNetwork && deployedNetwork.address
       );
 
       // Set web3, accounts, and contract to the state, and then proceed with an
       // example of interacting with the contract's methods.
-      this.setState({ web3, accounts, contract: instance }, this.runExample);
+      const changedState = { ...ethEnv, contract };
+      console.log(changedState);
+      this.setState(changedState);
     } catch (error) {
       // Catch any errors for any of the above operations.
       alert(
-        `Failed to load web3, accounts, or contract. Check console for details.`,
+        `Failed to load web3, accounts, or contract. Check console for details.`
       );
       console.error(error);
     }
-  };
-
-  runExample = async () => {
-    const { accounts, contract } = this.state;
-
-    // Stores a given value, 5 by default.
-    await contract.methods.set(5).send({ from: accounts[0] });
-
-    // Get the value from the contract to prove it worked.
-    const response = await contract.methods.get().call();
-
-    // Update state with the result.
-    this.setState({ storageValue: response });
   };
 
   render() {
     if (!this.state.web3) {
       return <div>Loading Web3, accounts, and contract...</div>;
     }
+
     return (
-      <div className="App">
-        <h1>Good to Go!</h1>
-        <p>Your Truffle Box is installed and ready.</p>
-        <h2>Smart Contract Example</h2>
-        <p>
-          If your contracts compiled and migrated successfully, below will show
-          a stored value of 5 (by default).
-        </p>
-        <p>
-          Try changing the value stored on <strong>line 42</strong> of App.js.
-        </p>
-        <div>The stored value is: {this.state.storageValue}</div>
-      </div>
+      <ethContext.Provider value={{ ...this.state }}>
+        {/* <BrowserRouter>
+          <Switch>
+            <Route exact path="/" component={} />
+            <Route exact path="/my" component={} />
+            <Route exact path="/bid" component={} />
+            <Route path="/detail/:id" component={} />
+          </Switch>
+        </BrowserRouter> */}
+        <TestComponent />
+      </ethContext.Provider>
     );
   }
 }
