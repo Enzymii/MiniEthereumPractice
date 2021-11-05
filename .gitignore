@@ -1,2 +1,3 @@
 contracts/artifacts
 client/src/contracts
+client/src/config.js

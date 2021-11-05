@@ -3,13 +3,15 @@ pragma solidity ^0.8.7;
 
 contract NFT {
     string public id;
+    address public creator;
     address[] public historyOwner;
     uint256 public endTime;
     address payable public highestBider;
     uint256 public highestBid;
 
-    constructor(string memory _id) {
+    constructor(string memory _id, address _creator) {
         id = _id;
+        creator = _creator;
     }
 
     function addOwner(address _owner) public {
@@ -18,6 +20,10 @@ contract NFT {
 
     function getCurrentOwner() public view returns (address) {
         return historyOwner[historyOwner.length - 1];
+    }
+
+    function getHistoryOwner() public view returns (address[] memory) {
+        return historyOwner;
     }
 
     function setEndTime(uint256 _endTime) public {
@@ -56,8 +62,54 @@ contract Platform {
         return collection;
     }
 
+    function getUserCollection(address addr)
+        public
+        view
+        returns (NFT[] memory)
+    {
+        return userCollection[addr];
+    }
+
+    function getNFTId(NFT nft) public view returns (string memory) {
+        return nft.id();
+    }
+
+    function getNFTStatus(NFT nft) public view returns (uint32) {
+        uint32 status = 0; // not on auction
+        if (nft.endTime() > block.timestamp) {
+            status = 1; // active
+        } else if (nft.highestBid() > 0) {
+            status = 2; // not claimed
+        }
+        return status;
+    }
+
+    function getNFTEndTime(NFT nft) public view returns (uint256) {
+        return nft.endTime();
+    }
+
+    function getHighestBid(NFT nft) public view returns (address, uint256) {
+        return (nft.highestBider(), nft.highestBid());
+    }
+
+    function getNFTOwner(NFT nft) public view returns (address) {
+        return nft.getCurrentOwner();
+    }
+
+    function getNFTCreator(NFT nft) public view returns (address) {
+        return nft.creator();
+    }
+
+    function getNFTHistoryOwner(NFT nft)
+        public
+        view
+        returns (address[] memory)
+    {
+        return nft.getHistoryOwner();
+    }
+
     function upload(address addr, string memory nftHash) public {
-        NFT nft = new NFT(nftHash);
+        NFT nft = new NFT(nftHash, addr);
         collection.push(nft);
         userCollection[addr].push(nft);
         nft.addOwner(addr);
@@ -94,14 +146,6 @@ contract Platform {
     ) public {
         require(nft.endTime() > block.timestamp && price > nft.highestBid());
         nft.setHighestBid(addr, price);
-    }
-
-    function testUserCollection(address addr)
-        public
-        view
-        returns (NFT[] memory)
-    {
-        return userCollection[addr];
     }
 
     function claim(address addr, NFT nft) public payable {
